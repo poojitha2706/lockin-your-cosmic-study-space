@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VideoSidebar } from '@/components/video/VideoSidebar';
 import { 
   Play, 
   Pause, 
@@ -26,6 +27,13 @@ type TimerMode = 'work' | 'break';
 type AmbientSound = 'lofi' | 'cafe' | 'rain' | 'white-noise' | 'silence';
 
 const StudyRoom = () => {
+  const [searchParams] = useSearchParams();
+  const roomName = searchParams.get('room') || 'Study Room';
+  
+  // Demo Daily.co room URL - replace with your actual Daily.co domain
+  const [roomUrl] = useState(`https://yourdomain.daily.co/${roomName.toLowerCase().replace(/\s+/g, '-')}`);
+  const [userName] = useState('Guest User'); // In production, get from auth
+  
   const [timeLeft, setTimeLeft] = useState(WORK_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState<TimerMode>('work');
@@ -84,34 +92,54 @@ const StudyRoom = () => {
     { id: 'silence', icon: <VolumeX className="w-4 h-4" />, label: 'Silence' },
   ];
 
+  const handleLeaveRoom = useCallback(() => {
+    window.location.href = '/dashboard';
+  }, []);
+
   return (
     <div className={`min-h-screen relative overflow-hidden ${deepFocusMode ? 'deep-focus' : ''}`}>
       <SpaceBackground />
 
       {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">{participantCount} studying</span>
-            </div>
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium">{formatTime(sessionTime)} session</span>
+      <header className="fixed top-0 left-0 right-0 z-50 px-4 lg:px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <h1 className="text-lg font-display font-semibold text-foreground truncate max-w-[150px] lg:max-w-none">
+              {roomName}
+            </h1>
+            <div className="hidden sm:flex items-center gap-4">
+              <div className="glass-card px-4 py-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">{participantCount} studying</span>
+              </div>
+              <div className="glass-card px-4 py-2 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-secondary" />
+                <span className="text-sm font-medium">{formatTime(sessionTime)} session</span>
+              </div>
             </div>
           </div>
           <Link to="/dashboard">
             <Button variant="glass" size="sm" className="gap-2">
               <LogOut className="w-4 h-4" />
-              Leave Room
+              <span className="hidden sm:inline">Leave Room</span>
             </Button>
           </Link>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-20 pb-32">
+      {/* Main Layout with Video Sidebar */}
+      <div className="relative z-10 flex flex-col lg:flex-row min-h-screen pt-20 pb-32 px-4 lg:px-6 gap-4 lg:gap-6">
+        {/* Video Sidebar - Left side on desktop, top on mobile */}
+        <aside className="w-full lg:w-auto order-2 lg:order-1 mt-4 lg:mt-0">
+          <VideoSidebar
+            roomUrl={roomUrl}
+            userName={userName}
+            onLeave={handleLeaveRoom}
+          />
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col items-center justify-center order-1 lg:order-2">
         {/* Session Goal */}
         <div className="w-full max-w-md mb-8 opacity-0 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="glass-card p-4">
@@ -255,8 +283,8 @@ const StudyRoom = () => {
             </div>
           </button>
         </div>
-      </main>
-
+        </main>
+      </div>
       {/* Bottom Ambient Controls */}
       <footer className="fixed bottom-0 left-0 right-0 z-50 px-6 py-4">
         <div className="max-w-2xl mx-auto">
