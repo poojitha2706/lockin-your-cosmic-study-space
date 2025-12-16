@@ -61,7 +61,7 @@ const Index = () => {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 opacity-0 animate-fade-in-up"
             style={{ animationDelay: '0.6s' }}
           >
-            <Link to="/auth">
+            <Link to="/dashboard">
               <Button variant="cosmic" size="xl" className="group">
                 <Rocket className="w-5 h-5 transition-transform group-hover:-translate-y-1" />
                 Launch Session
