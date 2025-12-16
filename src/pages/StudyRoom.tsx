@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VideoSidebar } from '@/components/video/VideoSidebar';
 import { NovaSidebar } from '@/components/chat/NovaSidebar';
+import { TaskList } from '@/components/TaskList';
+import { SessionSummaryModal } from '@/components/SessionSummaryModal';
 import { 
   Play, 
   Pause, 
@@ -29,6 +31,7 @@ type AmbientSound = 'lofi' | 'cafe' | 'rain' | 'white-noise' | 'silence';
 
 const StudyRoom = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const roomName = searchParams.get('room') || 'Study Room';
   
   // Daily.co room URL
@@ -42,6 +45,8 @@ const StudyRoom = () => {
   const [ambientSound, setAmbientSound] = useState<AmbientSound>('silence');
   const [deepFocusMode, setDeepFocusMode] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
+  const [focusSessions, setFocusSessions] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Mock data
   const participantCount = 12;
@@ -60,6 +65,7 @@ const StudyRoom = () => {
     } else if (timeLeft === 0) {
       // Switch modes
       if (mode === 'work') {
+        setFocusSessions(prev => prev + 1);
         setMode('break');
         setTimeLeft(BREAK_TIME);
       } else {
@@ -71,6 +77,19 @@ const StudyRoom = () => {
 
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, mode]);
+
+  const handleLeaveRoom = useCallback(() => {
+    if (sessionTime > 60) { // Only show summary if session was > 1 minute
+      setShowSummary(true);
+    } else {
+      navigate('/dashboard');
+    }
+  }, [sessionTime, navigate]);
+
+  const handleSummaryClose = () => {
+    setShowSummary(false);
+    navigate('/dashboard');
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -92,10 +111,6 @@ const StudyRoom = () => {
     { id: 'white-noise', icon: <Radio className="w-4 h-4" />, label: 'White Noise' },
     { id: 'silence', icon: <VolumeX className="w-4 h-4" />, label: 'Silence' },
   ];
-
-  const handleLeaveRoom = useCallback(() => {
-    window.location.href = '/dashboard';
-  }, []);
 
   return (
     <div className={`min-h-screen relative overflow-hidden ${deepFocusMode ? 'deep-focus' : ''}`}>
@@ -325,6 +340,22 @@ const StudyRoom = () => {
           }} />
         </div>
       )}
+
+      {/* Task List - Bottom Right */}
+      <TaskList />
+
+      {/* Session Summary Modal */}
+      <SessionSummaryModal 
+        isOpen={showSummary}
+        onClose={handleSummaryClose}
+        sessionData={{
+          duration: sessionTime,
+          focusSessions: focusSessions,
+          goal: sessionGoal || undefined,
+          tasksCompleted: 2,
+          totalTasks: 3,
+        }}
+      />
     </div>
   );
 };

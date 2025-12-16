@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
-import { Globe, Lock, Flame, Clock, LogOut, User } from 'lucide-react';
+import { Globe, Lock, Flame, Clock, LogOut, User, Settings } from 'lucide-react';
 
 const Dashboard = () => {
   // Mock user data
@@ -17,21 +17,31 @@ const Dashboard = () => {
       <SpaceBackground />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+      <header className="fixed top-0 left-0 right-0 z-50 px-4 lg:px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <span className="text-lg">🚀</span>
             </div>
-            <span className="font-display text-xl font-bold text-foreground">lockIn</span>
+            <span className="font-display text-xl font-bold text-foreground hidden sm:block">lockIn</span>
           </Link>
           
-          <div className="flex items-center gap-3">
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="glass-card px-3 sm:px-4 py-2 flex items-center gap-2">
               <Flame className="w-4 h-4 text-secondary" />
               <span className="font-semibold text-foreground">{user.streak}</span>
-              <span className="text-sm text-muted-foreground">day streak</span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">day streak</span>
             </div>
+            <Link to="/profile">
+              <Button variant="glass" size="icon" className="rounded-xl">
+                <User className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link to="/settings">
+              <Button variant="glass" size="icon" className="rounded-xl">
+                <Settings className="w-4 h-4" />
+              </Button>
+            </Link>
             <Button variant="glass" size="icon" className="rounded-xl">
               <LogOut className="w-4 h-4" />
             </Button>
