@@ -4,6 +4,7 @@ import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VideoSidebar } from '@/components/video/VideoSidebar';
+import { NovaSidebar } from '@/components/chat/NovaSidebar';
 import { 
   Play, 
   Pause, 
@@ -30,8 +31,8 @@ const StudyRoom = () => {
   const [searchParams] = useSearchParams();
   const roomName = searchParams.get('room') || 'Study Room';
   
-  // Demo Daily.co room URL - replace with your actual Daily.co domain
-  const [roomUrl] = useState(`https://yourdomain.daily.co/${roomName.toLowerCase().replace(/\s+/g, '-')}`);
+  // Daily.co room URL
+  const [roomUrl] = useState(`https://lovablehackathon.daily.co/${roomName.toLowerCase().replace(/\s+/g, '-')}`);
   const [userName] = useState('Guest User'); // In production, get from auth
   
   const [timeLeft, setTimeLeft] = useState(WORK_TIME);
@@ -127,9 +128,9 @@ const StudyRoom = () => {
         </div>
       </header>
 
-      {/* Main Layout with Video Sidebar */}
+      {/* Main Layout with Video Sidebar and Nova Sidebar */}
       <div className="relative z-10 flex flex-col lg:flex-row min-h-screen pt-20 pb-32 px-4 lg:px-6 gap-4 lg:gap-6">
-        {/* Video Sidebar - Left side on desktop, top on mobile */}
+        {/* Video Sidebar - Left side on desktop */}
         <aside className="w-full lg:w-auto order-2 lg:order-1 mt-4 lg:mt-0">
           <VideoSidebar
             roomUrl={roomUrl}
@@ -284,7 +285,13 @@ const StudyRoom = () => {
           </button>
         </div>
         </main>
+
+        {/* Nova AI Sidebar - Right side on desktop */}
+        <aside className="w-full lg:w-auto order-3 mt-4 lg:mt-0">
+          <NovaSidebar roomName={roomName} />
+        </aside>
       </div>
+
       {/* Bottom Ambient Controls */}
       <footer className="fixed bottom-0 left-0 right-0 z-50 px-6 py-4">
         <div className="max-w-2xl mx-auto">
