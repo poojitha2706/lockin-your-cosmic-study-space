@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SpaceBackground } from '@/components/SpaceBackground';
@@ -10,11 +10,12 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle auth logic here
-    console.log(isLogin ? 'Logging in...' : 'Signing up...');
+    // Handle auth logic here - for now, navigate to dashboard
+    navigate('/dashboard');
   };
 
   return (
