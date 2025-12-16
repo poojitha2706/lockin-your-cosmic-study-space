@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import PublicRooms from "./pages/PublicRooms";
 import PrivateRooms from "./pages/PrivateRooms";
+import StudyRoom from "./pages/StudyRoom";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/rooms/public" element={<PublicRooms />} />
           <Route path="/rooms/private" element={<PrivateRooms />} />
+          <Route path="/room/:roomId" element={<StudyRoom />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Users, Search, Plus } from 'lucide-react';
@@ -128,6 +128,7 @@ const PublicRooms = () => {
 };
 
 const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number }) => {
+  const navigate = useNavigate();
   const subjectEmoji = subjects.find(s => s.id === room.subject)?.emoji || '📚';
   const isFull = room.participants >= room.maxParticipants;
   const fillPercentage = (room.participants / room.maxParticipants) * 100;
@@ -175,6 +176,7 @@ const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number })
         size="sm" 
         className="w-full"
         disabled={isFull}
+        onClick={() => navigate(`/room/${room.id}`)}
       >
         {isFull ? 'Room Full' : 'Join Session'}
       </Button>
