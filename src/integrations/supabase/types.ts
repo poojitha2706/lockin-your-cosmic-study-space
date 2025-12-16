@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      rooms: {
+        Row: {
+          code: string | null
+          created_at: string
+          host_id: string | null
+          id: string
+          max_participants: number
+          name: string
+          participant_count: number
+          subject: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          max_participants?: number
+          name: string
+          participant_count?: number
+          subject: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          max_participants?: number
+          name?: string
+          participant_count?: number
+          subject?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
