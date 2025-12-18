@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, Search, Plus } from 'lucide-react';
+import { ArrowLeft, Users, Search, Plus, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateRoomModal } from '@/components/CreateRoomModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const subjects = [
   { id: 'all', label: 'All', emoji: '✨' },
@@ -17,23 +19,67 @@ const subjects = [
   { id: 'other', label: 'Other', emoji: '📚' },
 ];
 
-const mockRooms = [
-  { id: '1', name: 'Calculus Grind', subject: 'math', participants: 8, maxParticipants: 12, host: 'MathWiz' },
-  { id: '2', name: 'React Masters', subject: 'coding', participants: 15, maxParticipants: 20, host: 'DevGuru' },
-  { id: '3', name: 'Physics Lab', subject: 'science', participants: 5, maxParticipants: 10, host: 'QuantumLeap' },
-  { id: '4', name: 'Spanish Practice', subject: 'languages', participants: 7, maxParticipants: 8, host: 'Polyglot' },
-  { id: '5', name: 'Startup Ideas', subject: 'business', participants: 12, maxParticipants: 15, host: 'Founder' },
-  { id: '6', name: 'Digital Art Session', subject: 'arts', participants: 4, maxParticipants: 8, host: 'Artisan' },
-  { id: '7', name: 'Python Beginners', subject: 'coding', participants: 18, maxParticipants: 25, host: 'CodeCoach' },
-  { id: '8', name: 'Essay Writing', subject: 'other', participants: 6, maxParticipants: 10, host: 'WordSmith' },
-];
+interface Room {
+  id: string;
+  name: string;
+  subject: string;
+  participant_count: number;
+  max_participants: number;
+  host_id: string | null;
+}
 
 const PublicRooms = () => {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredRooms = mockRooms.filter(room => {
+  // Fetch rooms from database
+  useEffect(() => {
+    fetchRooms();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('public-rooms-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms',
+          filter: 'type=eq.public'
+        },
+        () => {
+          fetchRooms();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('type', 'public')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRooms(data || []);
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      toast.error('Failed to load rooms');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredRooms = rooms.filter(room => {
     const matchesSubject = selectedSubject === 'all' || room.subject === selectedSubject;
     const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSubject && matchesSearch;
@@ -103,17 +149,26 @@ const PublicRooms = () => {
             </div>
           </div>
 
-          {/* Rooms Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRooms.map((room, index) => (
-              <RoomCard key={room.id} room={room} delay={0.1 + index * 0.05} />
-            ))}
-          </div>
-
-          {filteredRooms.length === 0 && (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground">No rooms found. Try a different filter or create your own!</p>
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
+          ) : (
+            <>
+              {/* Rooms Grid */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredRooms.map((room, index) => (
+                  <RoomCard key={room.id} room={room} delay={0.1 + index * 0.05} />
+                ))}
+              </div>
+
+              {filteredRooms.length === 0 && (
+                <div className="text-center py-16">
+                  <p className="text-muted-foreground">No rooms found. Try a different filter or create your own!</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -127,11 +182,15 @@ const PublicRooms = () => {
   );
 };
 
-const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number }) => {
+const RoomCard = ({ room, delay }: { room: Room; delay: number }) => {
   const navigate = useNavigate();
   const subjectEmoji = subjects.find(s => s.id === room.subject)?.emoji || '📚';
-  const isFull = room.participants >= room.maxParticipants;
-  const fillPercentage = (room.participants / room.maxParticipants) * 100;
+  const isFull = room.participant_count >= room.max_participants;
+  const fillPercentage = (room.participant_count / room.max_participants) * 100;
+
+  const handleJoin = () => {
+    navigate(`/room/${room.id}?room=${encodeURIComponent(room.name)}`);
+  };
 
   return (
     <div 
@@ -146,7 +205,7 @@ const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number })
           </div>
           <div>
             <h3 className="font-display font-semibold text-foreground line-clamp-1">{room.name}</h3>
-            <p className="text-xs text-muted-foreground">by {room.host}</p>
+            <p className="text-xs text-muted-foreground capitalize">{room.subject}</p>
           </div>
         </div>
       </div>
@@ -156,7 +215,7 @@ const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number })
         <div className="flex items-center justify-between text-sm mb-2">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="w-4 h-4" />
-            <span>{room.participants}/{room.maxParticipants}</span>
+            <span>{room.participant_count}/{room.max_participants}</span>
           </div>
           {isFull && (
             <span className="text-xs px-2 py-1 rounded-full bg-destructive/20 text-destructive">Full</span>
@@ -176,7 +235,7 @@ const RoomCard = ({ room, delay }: { room: typeof mockRooms[0]; delay: number })
         size="sm" 
         className="w-full"
         disabled={isFull}
-        onClick={() => navigate(`/room/${room.id}`)}
+        onClick={handleJoin}
       >
         {isFull ? 'Room Full' : 'Join Session'}
       </Button>
