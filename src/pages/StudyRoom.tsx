@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { SpaceBackground } from '@/components/SpaceBackground';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,6 @@ import { VideoSidebar } from '@/components/video/VideoSidebar';
 import { NovaSidebar } from '@/components/chat/NovaSidebar';
 import { TaskList } from '@/components/TaskList';
 import { SessionSummaryModal } from '@/components/SessionSummaryModal';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   Play, 
   Pause, 
@@ -30,25 +29,13 @@ const BREAK_TIME = 5 * 60; // 5 minutes
 type TimerMode = 'work' | 'break';
 type AmbientSound = 'lofi' | 'cafe' | 'rain' | 'white-noise' | 'silence';
 
-interface Room {
-  id: string;
-  name: string;
-  subject: string;
-  type: string;
-  participant_count: number;
-  max_participants: number;
-}
-
 const StudyRoom = () => {
-  const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
-  const [room, setRoom] = useState<Room | null>(null);
-  const roomName = searchParams.get('room') || room?.name || 'Study Room';
+  const roomName = searchParams.get('room') || 'Study Room';
   
   // Daily.co room URL
-  const [roomUrl] = useState(`https://lovablehackathon.daily.co/${roomId || 'default-room'}`);
+  const [roomUrl] = useState(`https://lovablehackathon.daily.co/${roomName.toLowerCase().replace(/\s+/g, '-')}`);
   const [userName] = useState('Guest User'); // In production, get from auth
   
   const [timeLeft, setTimeLeft] = useState(WORK_TIME);
@@ -61,27 +48,8 @@ const StudyRoom = () => {
   const [focusSessions, setFocusSessions] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
 
-  // Fetch room data
-  useEffect(() => {
-    if (roomId) {
-      const fetchRoom = async () => {
-        const { data, error } = await supabase
-          .from('rooms')
-          .select('*')
-          .eq('id', roomId)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching room:', error);
-        } else {
-          setRoom(data);
-        }
-      };
-      fetchRoom();
-    }
-  }, [roomId]);
-
-  const participantCount = room?.participant_count || 1;
+  // Mock data
+  const participantCount = 12;
 
   const totalTime = mode === 'work' ? WORK_TIME : BREAK_TIME;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;

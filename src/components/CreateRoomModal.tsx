@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Check, Share2, Rocket, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Copy, Check, Share2, Rocket } from 'lucide-react';
 
 const subjects = [
   { id: 'math', label: 'Math', emoji: '🧮' },
@@ -24,15 +21,12 @@ interface CreateRoomModalProps {
 }
 
 export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalProps) => {
-  const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'created'>('form');
   const [roomName, setRoomName] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(10);
   const [generatedCode, setGeneratedCode] = useState('');
-  const [createdRoomId, setCreatedRoomId] = useState('');
   const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const generateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -43,48 +37,10 @@ export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalP
     return code;
   };
 
-  const handleCreate = async () => {
-    if (!roomName || !selectedSubject) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const code = isPrivate ? generateCode() : null;
-      
-      // Get current user if logged in
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data, error } = await supabase
-        .from('rooms')
-        .insert({
-          name: roomName,
-          subject: selectedSubject,
-          type: isPrivate ? 'private' : 'public',
-          code: code,
-          max_participants: maxParticipants,
-          host_id: user?.id || null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (isPrivate && code) {
-        setGeneratedCode(code);
-        setCreatedRoomId(data.id);
-        setStep('created');
-      } else {
-        // For public rooms, navigate directly to the room
-        toast.success('Room created successfully!');
-        handleClose();
-        navigate(`/room/${data.id}?room=${encodeURIComponent(roomName)}`);
-      }
-    } catch (error) {
-      console.error('Error creating room:', error);
-      toast.error('Failed to create room. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCreate = () => {
+    const code = generateCode();
+    setGeneratedCode(code);
+    setStep('created');
   };
 
   const copyCode = () => {
@@ -97,7 +53,6 @@ export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalP
     const url = `${window.location.origin}/join/${generatedCode}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
-    toast.success('Link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -107,13 +62,7 @@ export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalP
     setSelectedSubject('');
     setMaxParticipants(10);
     setGeneratedCode('');
-    setCreatedRoomId('');
     onClose();
-  };
-
-  const handleEnterRoom = () => {
-    handleClose();
-    navigate(`/room/${createdRoomId}?room=${encodeURIComponent(roomName)}`);
   };
 
   return (
@@ -184,14 +133,10 @@ export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalP
                 size="lg"
                 className="w-full"
                 onClick={handleCreate}
-                disabled={!roomName || !selectedSubject || isLoading}
+                disabled={!roomName || !selectedSubject}
               >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Rocket className="w-5 h-5" />
-                )}
-                {isLoading ? 'Creating...' : 'Launch Room'}
+                <Rocket className="w-5 h-5" />
+                Launch Room
               </Button>
             </div>
           </>
@@ -246,7 +191,7 @@ export const CreateRoomModal = ({ isOpen, onClose, isPrivate }: CreateRoomModalP
                 <Button variant="glass" className="flex-1" onClick={handleClose}>
                   Done
                 </Button>
-                <Button variant="cosmic" className="flex-1" onClick={handleEnterRoom}>
+                <Button variant="cosmic" className="flex-1">
                   Enter Room
                 </Button>
               </div>
