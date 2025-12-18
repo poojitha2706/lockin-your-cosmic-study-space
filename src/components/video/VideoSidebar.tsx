@@ -26,6 +26,8 @@ export const VideoSidebar = ({ roomUrl, userName, onLeave }: VideoSidebarProps) 
   useEffect(() => {
     if (!roomUrl) return;
 
+    console.log('Initializing Daily.co with room URL:', roomUrl);
+
     const daily = DailyIframe.createCallObject({
       audioSource: true,
       videoSource: true,
@@ -34,89 +36,105 @@ export const VideoSidebar = ({ roomUrl, userName, onLeave }: VideoSidebarProps) 
     callObjectRef.current = daily;
     setCallObject(daily);
 
+    const handleParticipantUpdate = () => {
+      const allParticipants = daily.participants();
+      const participantList = Object.values(allParticipants);
+      console.log('Participants updated:', participantList.length);
+      setParticipants(participantList);
+    };
+
     // Event handlers
     daily.on('joined-meeting', () => {
+      console.log('Successfully joined Daily meeting');
       setConnectionState('connected');
+      setError(null);
       // Apply default settings (muted, camera off)
       daily.setLocalAudio(false);
       daily.setLocalVideo(false);
+      handleParticipantUpdate();
     });
 
     daily.on('participant-joined', (event) => {
+      console.log('Participant joined:', event?.participant?.user_name);
       if (event?.participant) {
         toast.success(`${event.participant.user_name || 'Someone'} joined the room`);
       }
-      updateParticipants(daily);
+      handleParticipantUpdate();
     });
 
     daily.on('participant-left', (event) => {
+      console.log('Participant left:', event?.participant?.user_name);
       if (event?.participant) {
         toast.info(`${event.participant.user_name || 'Someone'} left the room`);
       }
-      updateParticipants(daily);
+      handleParticipantUpdate();
     });
 
     daily.on('participant-updated', () => {
-      updateParticipants(daily);
+      handleParticipantUpdate();
     });
 
-    daily.on('track-started', () => {
-      updateParticipants(daily);
+    daily.on('track-started', (event) => {
+      console.log('Track started:', event?.track?.kind, 'from', event?.participant?.user_name);
+      handleParticipantUpdate();
     });
 
-    daily.on('track-stopped', () => {
-      updateParticipants(daily);
+    daily.on('track-stopped', (event) => {
+      console.log('Track stopped:', event?.track?.kind);
+      handleParticipantUpdate();
     });
 
     daily.on('error', (event) => {
       console.error('Daily error:', event);
-      setError('Connection error occurred');
+      const errorMessage = event?.error?.type || event?.errorMsg || 'Connection error occurred';
+      setError(errorMessage);
       setConnectionState('error');
     });
 
     daily.on('network-quality-change', (event) => {
-      // Quality is a number: 0-100, lower means worse
       if (event && event.quality < 30) {
         setConnectionState('reconnecting');
-      } else if (event && event.quality >= 30 && connectionState === 'reconnecting') {
+      } else if (event && event.quality >= 30) {
         setConnectionState('connected');
       }
     });
 
     daily.on('camera-error', (event) => {
-      if (event?.error) {
-        toast.error('Camera access denied. You can still participate with audio.');
-        setIsCameraOff(true);
-      }
+      console.error('Camera error:', event);
+      toast.error('Camera access denied. You can still participate with audio.');
+      setIsCameraOff(true);
     });
 
-    daily.on('nonfatal-error', () => {
-      toast.error('A minor error occurred, but you can continue.');
+    daily.on('nonfatal-error', (event) => {
+      console.warn('Non-fatal Daily error:', event);
     });
 
     // Join the room
+    console.log('Attempting to join room:', roomUrl);
     daily
       .join({ url: roomUrl, userName })
       .then(() => {
-        updateParticipants(daily);
+        console.log('Join successful');
+        handleParticipantUpdate();
       })
       .catch((err) => {
-        console.error('Failed to join:', err);
-        setError('Failed to join the room. Please try again.');
+        console.error('Failed to join Daily room:', err);
+        let errorMsg = 'Failed to join the room.';
+        if (err?.message?.includes('meeting not found')) {
+          errorMsg = 'Room not found. The Daily.co room may not exist.';
+        } else if (err?.message?.includes('permission')) {
+          errorMsg = 'Permission denied. Please allow camera/microphone access.';
+        }
+        setError(errorMsg);
         setConnectionState('error');
       });
 
     return () => {
-      daily.leave();
+      console.log('Cleaning up Daily call');
+      daily.leave().catch(() => {});
       daily.destroy();
     };
   }, [roomUrl, userName]);
-
-  const updateParticipants = useCallback((daily: DailyCall) => {
-    const allParticipants = daily.participants();
-    const participantList = Object.values(allParticipants);
-    setParticipants(participantList);
-  }, []);
 
   const handleToggleMic = useCallback(() => {
     if (callObject) {
@@ -220,7 +238,7 @@ export const VideoSidebar = ({ roomUrl, userName, onLeave }: VideoSidebarProps) 
           {localParticipant && (
             <VideoParticipant
               participant={localParticipant}
-              videoTrack={localParticipant.tracks?.video?.track}
+              videoTrack={localParticipant.tracks?.video?.persistentTrack || localParticipant.tracks?.video?.track}
               isLocal={true}
               focusStatus="focused"
             />
@@ -231,7 +249,7 @@ export const VideoSidebar = ({ roomUrl, userName, onLeave }: VideoSidebarProps) 
             <VideoParticipant
               key={participant.session_id}
               participant={participant}
-              videoTrack={participant.tracks?.video?.track}
+              videoTrack={participant.tracks?.video?.persistentTrack || participant.tracks?.video?.track}
               isLocal={false}
               focusStatus="focused"
             />
