@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
 
 interface VideoParticipantProps {
@@ -21,15 +21,31 @@ export const VideoParticipant = ({
   isLocal = false,
   focusStatus = 'focused',
 }: VideoParticipantProps) => {
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Attach video track to video element
-  if (videoRef && videoTrack) {
-    const stream = new MediaStream([videoTrack]);
-    if (videoRef.srcObject !== stream) {
-      videoRef.srcObject = stream;
+  // Attach video track to video element using useEffect
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl || !videoTrack) {
+      if (videoEl) {
+        videoEl.srcObject = null;
+      }
+      return;
     }
-  }
+
+    // Create MediaStream and attach to video element
+    const stream = new MediaStream([videoTrack]);
+    videoEl.srcObject = stream;
+    
+    // Ensure video plays
+    videoEl.play().catch((err) => {
+      console.log('Video autoplay failed:', err);
+    });
+
+    return () => {
+      videoEl.srcObject = null;
+    };
+  }, [videoTrack]);
 
   const hasVideo = participant.video && videoTrack;
   const userName = participant.user_name || 'Guest';
@@ -40,16 +56,17 @@ export const VideoParticipant = ({
         isLocal ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : ''
       }`}
     >
-      {/* Video or Placeholder */}
-      {hasVideo ? (
-        <video
-          ref={setVideoRef}
-          autoPlay
-          playsInline
-          muted={isLocal}
-          className="w-full h-full object-cover"
-        />
-      ) : (
+      {/* Video element - always rendered but hidden when no video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={isLocal}
+        className={`w-full h-full object-cover ${hasVideo ? '' : 'hidden'}`}
+      />
+      
+      {/* Placeholder when no video */}
+      {!hasVideo && (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/60 to-muted/40">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
             <span className="text-2xl font-bold text-primary">
